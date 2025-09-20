@@ -10,17 +10,17 @@ This implementation provides a thread-safe, functional approach to rate limiting
 
 ### POJO Classes
 
-1. **`BucketInfo`** - Immutable representation of a bucket's state
+1. **`BucketInfoCO`** - Immutable representation of a bucket's state
    - Current level (amount of "liquid" in bucket)
    - Last update timestamp
    - Methods for leaking and adding requests
 
-2. **`RateLimiter`** - Immutable rate limiter configuration and state
+2. **`RateLimiterCO`** - Immutable rate limiter configuration and state
    - Bucket capacity and leak rate
    - Map of all user buckets
    - Methods for bucket management
 
-3. **`RequestResult`** - Immutable result of rate limit decisions
+3. **`RateLimiterResponse`** - Immutable result of rate limit decisions
    - Boolean decision (allowed/rejected)
    - New rate limiter state after processing
 
@@ -45,9 +45,8 @@ This implementation provides a thread-safe, functional approach to rate limiting
 - Higher memory usage due to object creation
 - Potential performance impact from constant allocation
 - More complex for developers used to mutable approaches
-- Garbage collection pressure with high request volumes
 
-**Mitigation**: For production use, consider implementing object pooling or using persistent data structures for better performance.
+
 
 ### 2. Time-Based Leaking Strategy
 
@@ -64,7 +63,6 @@ This implementation provides a thread-safe, functional approach to rate limiting
 - Potentially complex time arithmetic
 - Must handle edge cases like backwards time
 
-**Alternative Considered**: Background thread approach was rejected due to complexity and resource overhead.
 
 ### 3. Per-User Bucket Isolation
 
@@ -72,8 +70,6 @@ This implementation provides a thread-safe, functional approach to rate limiting
 
 **Benefits**:
 - Perfect isolation between users
-- Simple to understand and implement
-- Easy to debug individual user behavior
 - Flexible per-user configuration possible
 
 **Trade-offs**:
@@ -86,10 +82,6 @@ This implementation provides a thread-safe, functional approach to rate limiting
 ### 4. Edge Case Handling Strategy
 
 **Decision**: Graceful degradation rather than strict enforcement for edge cases.
-
-**Backwards Time**: Update timestamp but don't apply negative leaking
-- **Benefit**: System remains functional despite clock issues
-- **Trade-off**: Slight deviation from pure algorithm
 
 **Large Time Gaps**: Allow complete bucket drainage
 - **Benefit**: System recovers from long periods of inactivity
@@ -106,7 +98,6 @@ This implementation provides a thread-safe, functional approach to rate limiting
 **Benefits**:
 - High precision for fractional leak rates
 - Supports sub-second timing
-- Natural arithmetic operations
 
 **Trade-offs**:
 - Potential floating-point precision errors in long-running systems
@@ -126,22 +117,9 @@ This implementation provides a thread-safe, functional approach to rate limiting
 - Requires careful exception handling by callers
 - Less forgiving than lenient approaches
 
-### 7. API Design Choices
 
-**Decision**: Service class with static-like methods operating on immutable state objects.
 
-**Benefits**:
-- Clear separation of state and behavior
-- Testable without complex setup
-- Functional programming style
-- Easy to compose and extend
-
-**Trade-offs**:
-- More verbose than object-oriented approach
-- Requires discipline to maintain immutability
-- Learning curve for developers expecting OOP patterns
-
-### 8. Memory vs. CPU Trade-offs
+### 7. Memory vs. CPU Trade-offs
 
 **Choice Made**: Prioritize correctness and thread-safety over raw performance.
 
@@ -157,7 +135,7 @@ This implementation provides a thread-safe, functional approach to rate limiting
 
 **Rationale**: For most rate limiting scenarios, correctness and maintainability outweigh performance concerns. The bottleneck is typically I/O or business logic, not the rate limiter itself.
 
-### 9. Testing Strategy
+### 8. Testing Strategy
 
 **Decision**: Comprehensive unit tests covering all edge cases and normal operations.
 
@@ -187,9 +165,5 @@ For production deployment, consider:
 
 ## Alternative Approaches Considered
 
-1. **Token Bucket**: More complex to implement correctly, similar performance characteristics
-2. **Fixed Window**: Simpler but less smooth rate limiting behavior  
-3. **Sliding Window**: More accurate but significantly higher memory usage
-4. **Distributed Rate Limiting**: Requires external coordination (Redis, etc.)
+1. **Distributed Rate Limiting**: Requires external coordination (Redis, etc.)
 
-The leaky bucket approach provides the best balance of accuracy, simplicity, and resource usage for most single-node applications.
